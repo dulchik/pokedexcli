@@ -2,32 +2,39 @@ package main
 
 import (
 	"fmt"
-	"net/http"
-	"log"
-	"io"
-	"strconv"
+	"errors"
 )
 
-func commandMap() error {
-	offset := 0
-	url := "https://pokeapi.co/api/v2/location-area?limit=20&offset=" + strconv.Itoa(offset)
-	res, err := http.Get(url)
+func commandMapf(c *config) error {
+	res, err := c.pokeapiClient.ListLocations(c.nextLocationsURL)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
-	body, err := io.ReadAll(res.Body)
-	if res.StatusCode > 299 {
-		log.Fatalf("Rresponse failed with status code: %d and\nbody: %s\n", res.StatusCode, body)
+
+	c.nextLocationsURL = res.Next
+	c.prevLocationsURL = res.Previous
+
+	for _, loc := range res.Results {
+		fmt.Println(loc.Name)
 	}
+	return nil
+}
+
+func commandMapb(c *config) error {
+	if c.prevLocationsURL == nil {
+		return errors.New("your're on the first page")
+	}
+
+	res, err := c.pokeapiClient.ListLocations(c.prevLocationsURL)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
-	defer res.Body.Close()
+	c.nextLocationsURL = res.Next
+	c.prevLocationsURL = res.Previous
 
-	
-
-	fmt.Printf("%s\n", body)
-	
+	for _, loc := range res.Results {
+		fmt.Println(loc.Name)
+	}
 	return nil
 }
